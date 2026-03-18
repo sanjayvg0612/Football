@@ -17,8 +17,9 @@ export default function LiveScores() {
   const [connectionStatus, setConnectionStatus] = useState<string>('Connecting...');
 
   useEffect(() => {
-    // Connect to the API Gateway routing to the Live Score Service
-    const eventSource = new EventSource('http://localhost:8080/api/live-scores/stream');
+    // Connect to the API Gateway using the current browser's hostname dynamically
+    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    const eventSource = new EventSource(`http://${host}:8080/api/live-scores/stream`);
 
     eventSource.onopen = () => {
       setConnectionStatus('Connected (Live)');

@@ -27,8 +27,9 @@ export default function UpcomingFixtures() {
         ];
 
         try {
-          // Attempting to fetch from API Gateway (Fixture Service)
-          const res = await fetch('http://localhost:8080/api/fixtures/upcoming');
+          // Attempting to fetch from API Gateway dynamically relative to browser host
+          const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+          const res = await fetch(`http://${host}:8080/api/fixtures/upcoming`);
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
