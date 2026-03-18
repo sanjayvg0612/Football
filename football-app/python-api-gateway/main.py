@@ -28,8 +28,13 @@ async def proxy_live_scores(request: Request, path: str):
     # Handle Server-Sent Events (SSE) streaming for live scores
     if "stream" in path:
         async def event_generator():
-            async with httpx.AsyncClient() as sse_client:
-                async with sse_client.stream(request.method, url, headers=dict(request.headers)) as response:
+            proxy_headers = dict(request.headers)
+            proxy_headers.pop("host", None)
+            proxy_headers.pop("connection", None)
+            proxy_headers.pop("accept-encoding", None)
+            
+            async with httpx.AsyncClient(timeout=None) as sse_client:
+                async with sse_client.stream(request.method, url, headers=proxy_headers) as response:
                     async for chunk in response.aiter_bytes():
                         yield chunk
         return StreamingResponse(event_generator(), media_type="text/event-stream")

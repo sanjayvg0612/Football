@@ -25,7 +25,7 @@ export default function LiveScores() {
       setConnectionStatus('Connected (Live)');
     };
 
-    eventSource.addEventListener('live-score-update', (event) => {
+    eventSource.addEventListener('live-score-update', (event: any) => {
       const newMatch: Match = JSON.parse(event.data);
       setMatches((prevMatches) => {
         // Update existing match or add new one
