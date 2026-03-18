@@ -28,9 +28,10 @@ async def proxy_live_scores(request: Request, path: str):
     # Handle Server-Sent Events (SSE) streaming for live scores
     if "stream" in path:
         async def event_generator():
-            async with client.stream(request.method, url, headers=dict(request.headers)) as response:
-                async for chunk in response.aiter_raw():
-                    yield chunk
+            async with httpx.AsyncClient() as sse_client:
+                async with sse_client.stream(request.method, url, headers=dict(request.headers)) as response:
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     
     # Standard REST proxy logic
