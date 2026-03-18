@@ -1,0 +1,19 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: fixture-service
+  datasource:
+    url: jdbc:postgresql://database-1.cluster-ro-cz26q8osk56h.ap-south-1.rds.amazonaws.com:5432/database-1
+    username: sanjay
+    password: Sanjayvg0612
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
