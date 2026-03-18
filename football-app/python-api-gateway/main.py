@@ -15,8 +15,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-LIVE_SCORE_SERVICE_URL = "http://localhost:8081"
-FIXTURE_SERVICE_URL = "http://localhost:8082"
+# 172.17.0.1 is the default host IP from inside a Linux Docker container
+LIVE_SCORE_SERVICE_URL = "http://172.17.0.1:8081"
+FIXTURE_SERVICE_URL = "http://172.17.0.1:8082"
 
 @app.api_route("/api/live-scores/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"])
 async def proxy_live_scores(request: Request, path: str):
