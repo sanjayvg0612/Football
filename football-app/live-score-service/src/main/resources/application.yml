@@ -6,7 +6,7 @@ spring:
     name: live-score-service
   datasource:
     url: jdbc:postgresql://database-1.cluster-ro-cz26q8osk56h.ap-south-1.rds.amazonaws.com:5432/database-1
-    username: sanjay
+    username: postgres
     password: Sanjayvg0612
     driver-class-name: org.postgresql.Driver
   jpa:

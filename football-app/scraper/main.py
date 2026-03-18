@@ -7,7 +7,7 @@ from datetime import datetime
 # Database Configuration
 DB_HOST = "database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com"
 DB_NAME = "database-1"
-DB_USER = "sanjay"
+DB_USER = "postgres"
 DB_PASS = "Sanjayvg0612"
 
 # Set up database connection and ensure the live_scores table exists
