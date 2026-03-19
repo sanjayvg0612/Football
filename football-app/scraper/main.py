@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database Configuration - Use env vars with fallbacks
-DB_HOST = os.getenv("DB_HOST", "database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com")
+DB_HOST = os.getenv("DB_HOST", "database-1.cluster-ro-cz26q8osk56h.ap-south-1.rds.amazonaws.com")
 DB_NAME = os.getenv("DB_NAME", "postgres")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASS", "Sanjayvg0612")
