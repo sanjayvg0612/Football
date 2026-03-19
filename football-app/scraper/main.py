@@ -5,12 +5,15 @@ import schedule
 import time
 from datetime import datetime
 
-# Database Configuration
-DB_HOST = "database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com"
-DB_NAME = "postgres"
-DB_USER = "postgres"
-DB_PASS = "Sanjayvg0612"
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+# Database Configuration - Use env vars with fallbacks
+DB_HOST = os.getenv("DB_HOST", "database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com")
+DB_NAME = os.getenv("DB_NAME", "postgres")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASS = os.getenv("DB_PASS", "Sanjayvg0612")
 API_TOKEN = os.getenv("FOOTBALL_DATA_API_TOKEN", "d599c4dcb18c4f84b2000c37301f1916")
 
 # Set up database connection and ensure the live_scores table exists
@@ -51,7 +54,7 @@ from datetime import datetime, timedelta
 
 # Scrape logic targeting football-data.org API
 def scrape_football_data():
-    print(f"[{datetime.now()}] Scraping football data from football-data.org...")
+    logger.info(f"Scraping football data from football-data.org...")
     
     date_from = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
     date_to = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
@@ -59,10 +62,6 @@ def scrape_football_data():
     headers = {
         "X-Auth-Token": API_TOKEN
     }
-    
-    # Debug logs for URL and headers
-    print(f"Constructed URL: {url}")
-    print(f"Headers: {headers}")
     
     try:
         response = requests.get(url, headers=headers)
@@ -82,16 +81,21 @@ def scrape_football_data():
                 else:
                     match_status = "SCHEDULED"
                 
-                # Add debug log for each match being processed
-                print(f"Processing match: {match}")
+                # Skip verbose logging per match
+
+                # Safely extract scores, handle nulls
+                home_score_raw = match["score"]["fullTime"]["home"]
+                away_score_raw = match["score"]["fullTime"]["away"]
+                home_score = int(home_score_raw) if home_score_raw is not None else 0
+                away_score = int(away_score_raw) if away_score_raw is not None else 0
 
                 # Add match data to the list for insertion
                 matches_to_insert.append({
                     "match_id": match["id"],
                     "home_team": match["homeTeam"]["name"],
                     "away_team": match["awayTeam"]["name"],
-                    "home_score": match["score"]["fullTime"]["home"],
-                    "away_score": match["score"]["fullTime"]["away"],
+                    "home_score": home_score,
+                    "away_score": away_score,
                     "minute": match.get("minute", "N/A"),
                     "status": match_status,
                     "updated_at": datetime.now()
@@ -125,17 +129,42 @@ def scrape_football_data():
         print(f"Error during scraping: {e}")
 
 def update_database(matches, fixtures):
+    conn = None
     try:
         conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
         cur = conn.cursor()
         
+        # Bulk upsert for live_scores
+        live_score_data = []
         for match in matches:
-            print(f"Processing match: {match}")
-            insert_match_to_db(match)
-            print(f"[DEBUG] Match with ID {match['id']} processed.")
-            
-        for fixture in fixtures:
-            cur.execute('''
+            live_score_data.append((
+                match['match_id'],
+                match['home_team'],
+                match['away_team'],
+                match['home_score'],
+                match['away_score'],
+                match['minute'],
+                match['status']
+            ))
+        
+        if live_score_data:
+            cur.executemany('''
+                INSERT INTO live_scores (match_id, home_team, away_team, home_score, away_score, minute, status, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (match_id) DO UPDATE SET
+                    home_team = EXCLUDED.home_team,
+                    away_team = EXCLUDED.away_team,
+                    home_score = EXCLUDED.home_score,
+                    away_score = EXCLUDED.away_score,
+                    minute = EXCLUDED.minute,
+                    status = EXCLUDED.status,
+                    updated_at = NOW();
+            ''', live_score_data)
+            logger.info(f"Upserted {len(live_score_data)} live scores")
+        
+        # Bulk upsert for fixtures
+        if fixtures:
+            cur.executemany('''
                 INSERT INTO fixtures (id, home_team, away_team, match_date, league, status)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE 
@@ -144,50 +173,21 @@ def update_database(matches, fixtures):
                     match_date = EXCLUDED.match_date,
                     league = EXCLUDED.league,
                     status = EXCLUDED.status;
-            ''', fixture)
+            ''', fixtures)
+            logger.info(f"Upserted {len(fixtures)} fixtures")
             
         conn.commit()
-        cur.close()
-        conn.close()
-        print(f"Successfully updated/inserted {len(matches)} live scores and {len(fixtures)} fixtures in PostgreSQL.")
+        logger.info("Database update completed successfully")
     except Exception as e:
-        print(f"Database update error: {e}")
+        logger.error(f"Database update error: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
 
-# Updated database insertion logic with debug logs
-def insert_match_to_db(match):
-    try:
-        # Construct the SQL query for insertion
-        query = """
-        INSERT INTO live_scores (match_id, away_score, away_team, home_score, home_team, minute, status, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
-        ON CONFLICT (match_id) DO UPDATE SET
-            away_score = EXCLUDED.away_score,
-            home_score = EXCLUDED.home_score,
-            minute = EXCLUDED.minute,
-            status = EXCLUDED.status,
-            updated_at = NOW();
-        """
-
-        # Extract match details
-        match_id = match['id']
-        away_score = match['score']['fullTime']['away']
-        away_team = match['awayTeam']['name']
-        home_score = match['score']['fullTime']['home']
-        home_team = match['homeTeam']['name']
-        minute = match.get('minute', 'FT')  # Default to 'FT' if minute is not available
-        status = match['status']
-
-        # Log the query and values
-        print(f"[DEBUG] Executing query: {query}")
-        print(f"[DEBUG] Values: {match_id}, {away_score}, {away_team}, {home_score}, {home_team}, {minute}, {status}")
-
-        # Execute the query
-        cursor.execute(query, (match_id, away_score, away_team, home_score, home_team, minute, status))
-        connection.commit()
-
-        print(f"[INFO] Successfully inserted/updated match with ID {match_id} into the database.")
-    except Exception as e:
-        print(f"[ERROR] Failed to insert match with ID {match['id']}: {e}")
+# REMOVED: insert_match_to_db no longer needed (using bulk upsert)
 
 if __name__ == "__main__":
     init_db()
