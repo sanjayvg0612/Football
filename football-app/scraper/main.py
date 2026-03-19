@@ -47,11 +47,15 @@ def init_db():
     except Exception as e:
         print(f"Error initializing database: {e}")
 
+from datetime import datetime, timedelta
+
 # Scrape logic targeting football-data.org API
 def scrape_football_data():
     print(f"[{datetime.now()}] Scraping football data from football-data.org...")
     
-    url = "https://api.football-data.org/v4/matches"
+    date_from = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
+    date_to = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+    url = f"https://api.football-data.org/v4/matches?dateFrom={date_from}&dateTo={date_to}"
     headers = {
         "X-Auth-Token": API_TOKEN
     }
