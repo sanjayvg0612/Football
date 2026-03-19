@@ -153,23 +153,39 @@ def update_database(matches, fixtures):
     except Exception as e:
         print(f"Database update error: {e}")
 
+# Updated database insertion logic with debug logs
 def insert_match_to_db(match):
     try:
-        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
-        cur = conn.cursor()
-        cur.execute('''
-            INSERT INTO live_scores (match_id, home_team, away_team, home_score, away_score, minute, status, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (match_id) DO UPDATE 
-            SET home_score = EXCLUDED.home_score,
-                away_score = EXCLUDED.away_score,
-                minute = EXCLUDED.minute,
-                status = EXCLUDED.status,
-                updated_at = EXCLUDED.updated_at;
-        ''', match)
-        conn.commit()
-        cur.close()
-        print(f"[INFO] Successfully inserted match with ID {match['id']} into the database.")
+        # Construct the SQL query for insertion
+        query = """
+        INSERT INTO live_scores (match_id, away_score, away_team, home_score, home_team, minute, status, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (match_id) DO UPDATE SET
+            away_score = EXCLUDED.away_score,
+            home_score = EXCLUDED.home_score,
+            minute = EXCLUDED.minute,
+            status = EXCLUDED.status,
+            updated_at = NOW();
+        """
+
+        # Extract match details
+        match_id = match['id']
+        away_score = match['score']['fullTime']['away']
+        away_team = match['awayTeam']['name']
+        home_score = match['score']['fullTime']['home']
+        home_team = match['homeTeam']['name']
+        minute = match.get('minute', 'FT')  # Default to 'FT' if minute is not available
+        status = match['status']
+
+        # Log the query and values
+        print(f"[DEBUG] Executing query: {query}")
+        print(f"[DEBUG] Values: {match_id}, {away_score}, {away_team}, {home_score}, {home_team}, {minute}, {status}")
+
+        # Execute the query
+        cursor.execute(query, (match_id, away_score, away_team, home_score, home_team, minute, status))
+        connection.commit()
+
+        print(f"[INFO] Successfully inserted/updated match with ID {match_id} into the database.")
     except Exception as e:
         print(f"[ERROR] Failed to insert match with ID {match['id']}: {e}")
 
