@@ -130,16 +130,9 @@ def update_database(matches, fixtures):
         cur = conn.cursor()
         
         for match in matches:
-            cur.execute('''
-                INSERT INTO live_scores (match_id, home_team, away_team, home_score, away_score, minute, status, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (match_id) DO UPDATE 
-                SET home_score = EXCLUDED.home_score,
-                    away_score = EXCLUDED.away_score,
-                    minute = EXCLUDED.minute,
-                    status = EXCLUDED.status,
-                    updated_at = EXCLUDED.updated_at;
-            ''', match)
+            print(f"Processing match: {match}")
+            insert_match_to_db(match)
+            print(f"[DEBUG] Match with ID {match['id']} processed.")
             
         for fixture in fixtures:
             cur.execute('''
@@ -159,6 +152,26 @@ def update_database(matches, fixtures):
         print(f"Successfully updated/inserted {len(matches)} live scores and {len(fixtures)} fixtures in PostgreSQL.")
     except Exception as e:
         print(f"Database update error: {e}")
+
+def insert_match_to_db(match):
+    try:
+        conn = psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS)
+        cur = conn.cursor()
+        cur.execute('''
+            INSERT INTO live_scores (match_id, home_team, away_team, home_score, away_score, minute, status, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (match_id) DO UPDATE 
+            SET home_score = EXCLUDED.home_score,
+                away_score = EXCLUDED.away_score,
+                minute = EXCLUDED.minute,
+                status = EXCLUDED.status,
+                updated_at = EXCLUDED.updated_at;
+        ''', match)
+        conn.commit()
+        cur.close()
+        print(f"[INFO] Successfully inserted match with ID {match['id']} into the database.")
+    except Exception as e:
+        print(f"[ERROR] Failed to insert match with ID {match['id']}: {e}")
 
 if __name__ == "__main__":
     init_db()
