@@ -18,8 +18,7 @@ export default function LiveScores() {
 
   useEffect(() => {
     // Dynamic host detection for local/prod compatibility
-    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    const eventSource = new EventSource(`http://${host}:8081/api/live-scores/stream`);
+    const eventSource = new EventSource(`/api/live-scores/stream`);
 
     eventSource.onopen = () => {
       setConnectionStatus('Connected (Live)');
