@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend/build:/usr/share/nginx/html # Build frontend first
+    depends_on:
+      - api-gateway
+    networks:
+      - football-network
+
+  # ... include all other services from docker-compose.yml

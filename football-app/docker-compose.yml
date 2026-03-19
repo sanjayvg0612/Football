@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Sanjayvg0612
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - football-network
+
+  scraper:
+    build: ./scraper
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: postgres
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASS: Sanjayvg0612
+      FOOTBALL_DATA_API_TOKEN: d599c4dcb18c4f84b2000c37301f1916
+    networks:
+      - football-network
+
+  api-gateway:
+    build: ./python-api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - live-score-service
+      - fixture-service
+    networks:
+      - football-network
+
+  live-score-service:
+    build: ./live-score-service
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Sanjayvg0612
+    networks:
+      - football-network
+
+  fixture-service:
+    build: ./fixture-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Sanjayvg0612
+    networks:
+      - football-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - football-network
+
+volumes:
+  postgres_data:
+
+networks:
+  football-network:
+    driver: bridge

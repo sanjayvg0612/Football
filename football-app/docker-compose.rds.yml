@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  scraper:
+    build: ./scraper
+    environment:
+      DB_HOST: database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASS: Sanjayvg0612
+      FOOTBALL_DATA_API_TOKEN: d599c4dcb18c4f84b2000c37301f1916
+
+  api-gateway:
+    build: ./python-api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - live-score-service
+      - fixture-service
+    environment:
+      LIVE_SCORE_SERVICE_URL: http://live-score-service:8080
+      FIXTURE_SERVICE_URL: http://fixture-service:8080
+
+  live-score-service:
+    build: ./live-score-service
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Sanjayvg0612
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+  fixture-service:
+    build: ./fixture-service
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database-1.cluster-cz26q8osk56h.ap-south-1.rds.amazonaws.com:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Sanjayvg0612
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
