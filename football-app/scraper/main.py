@@ -60,6 +60,10 @@ def scrape_football_data():
         "X-Auth-Token": API_TOKEN
     }
     
+    # Debug logs for URL and headers
+    print(f"Constructed URL: {url}")
+    print(f"Headers: {headers}")
+    
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -78,24 +82,20 @@ def scrape_football_data():
                 else:
                     match_status = "SCHEDULED"
                 
-                score_obj = match.get("score", {}).get("fullTime", {})
-                if score_obj is None:
-                    score_obj = {}
-                home_score = score_obj.get("home") if score_obj.get("home") is not None else 0
-                away_score = score_obj.get("away") if score_obj.get("away") is not None else 0
-                
-                minute = "Live" if match_status == "LIVE" else ""
-                
-                matches_to_insert.append((
-                    match.get("id"),
-                    match.get("homeTeam", {}).get("name", "Unknown"),
-                    match.get("awayTeam", {}).get("name", "Unknown"),
-                    home_score,
-                    away_score,
-                    minute,
-                    match_status,
-                    datetime.now()
-                ))
+                # Add debug log for each match being processed
+                print(f"Processing match: {match}")
+
+                # Add match data to the list for insertion
+                matches_to_insert.append({
+                    "match_id": match["id"],
+                    "home_team": match["homeTeam"]["name"],
+                    "away_team": match["awayTeam"]["name"],
+                    "home_score": match["score"]["fullTime"]["home"],
+                    "away_score": match["score"]["fullTime"]["away"],
+                    "minute": match.get("minute", "N/A"),
+                    "status": match_status,
+                    "updated_at": datetime.now()
+                })
                 
                 # If Scheduled, also add to fixtures table
                 if match_status == "SCHEDULED":
